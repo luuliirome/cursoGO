@@ -1,9 +1,28 @@
 package service
 
-// Tweet es la variable que guarda el tweet actual
-var Tweet string 
+import (
+	"fmt"
 
-// PublishTweet modifica a variable Tweet
-func PublishTweet(tweet string){
-	Tweet = tweet
+	"github.com/cursoGO/domain"
+)
+
+var tweet *domain.Tweet
+
+// PublishTweet modifica la variable Tweet
+func PublishTweet(t *domain.Tweet) error {
+	if t.Text == "" {
+		var err error = fmt.Errorf("text is required")
+		return err
+	}
+	if t.User == nil {
+		var err error = fmt.Errorf("user is required")
+		return err
+	}
+	tweet = t
+	return nil
+}
+
+// GetTweet devuelve el tweet
+func GetTweet() *domain.Tweet {
+	return tweet
 }
