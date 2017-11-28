@@ -9,14 +9,16 @@ import (
 
 func TestPubishedTweetIsSaved(t *testing.T) {
 
+	var tm service.TweetManager = service.TweetManager{}
+
 	var err error
 
-	service.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
-	service.Login("lurome_96@hotmail.com", "123456")
+	tm.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
+	tm.Login("lurome_96@hotmail.com", "123456")
 
 	var text string = "This is my first tweet"
 
-	err = service.PublishTweet(text, "luuliirome")
+	err = tm.PublishTweet(text, "luuliirome")
 
 	if err != nil {
 		t.Error("NO Expected" + err.Error())
@@ -24,7 +26,7 @@ func TestPubishedTweetIsSaved(t *testing.T) {
 	}
 
 	var publishedTweet *domain.Tweet
-	publishedTweet, err = service.GetLastTweet()
+	publishedTweet, err = tm.GetLastTweet()
 
 	if publishedTweet.User.Nickname != "luuliirome" &&
 		publishedTweet.Text != text {
@@ -60,24 +62,26 @@ func TestPubishedErrorCreatingTweet(t *testing.T) {
 
 func TestPublishMultipleTweets(t *testing.T) {
 
+	var tm service.TweetManager = service.TweetManager{}
+
 	var user *domain.User
 	var err error
 
 	user, err = domain.NewUser("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
 	verifyError(err, t)
 
-	service.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
-	service.Login("luuliirome", "123456")
+	tm.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
+	tm.Login("luuliirome", "123456")
 
 	var text1 string = " tuvieja 1"
 	var text2 string = "lucia gata"
 
-	err = service.PublishTweet(text1, user.Nickname)
+	err = tm.PublishTweet(text1, user.Nickname)
 	verifyError(err, t)
-	err = service.PublishTweet(text2, user.Nickname)
+	err = tm.PublishTweet(text2, user.Nickname)
 	verifyError(err, t)
 
-	cantidadTweets, _ := service.CantidadDeTweets(user.Nickname)
+	cantidadTweets, _ := tm.CantidadDeTweets(user.Nickname)
 
 	if cantidadTweets != 2 {
 		t.Error("La cantidad de tweets publicados por el user es incorrecta")
@@ -87,20 +91,22 @@ func TestPublishMultipleTweets(t *testing.T) {
 
 func TestGetByID(t *testing.T) {
 
+	var tm service.TweetManager = service.TweetManager{}
+
 	var user *domain.User
 	var err error
 
 	user, err = domain.NewUser("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
 
-	service.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
-	service.Login("luuliirome", "123456")
+	tm.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
+	tm.Login("luuliirome", "123456")
 
 	var text string = "Gregorio puto"
 
-	_ = service.PublishTweet(text, user.Nickname)
+	_ = tm.PublishTweet(text, user.Nickname)
 
 	var tweet *domain.Tweet
-	tweet, err = service.GetTweetByID(1)
+	tweet, err = tm.GetTweetByID(1)
 
 	if err != nil {
 		t.Error(err.Error())
@@ -113,17 +119,19 @@ func TestGetByID(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	service.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
-	service.Login("luuliirome", "123456")
+	var tm service.TweetManager = service.TweetManager{}
+
+	tm.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
+	tm.Login("luuliirome", "123456")
 
 	var text string = "Gregorio puto"
 
-	_ = service.PublishTweet(text, "luuliirome")
+	_ = tm.PublishTweet(text, "luuliirome")
 
-	_ = service.Logout("luuliirome", "123456")
+	_ = tm.Logout("luuliirome", "123456")
 
 	var err error
-	err = service.PublishTweet(text, "luuliirome")
+	err = tm.PublishTweet(text, "luuliirome")
 
 	if err == nil {
 		t.Error("Expected error")
