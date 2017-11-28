@@ -6,15 +6,17 @@ import (
 	"github.com/cursoGO/domain"
 )
 
-var tweets []*domain.Tweet
-var usuarios []*domain.User
-var logueados []*domain.User
+type TweetManager struct {
+	tweets    []*domain.Tweet
+	usuarios  []*domain.User
+	logueados []*domain.User
+}
 
-func Login(userID string, contraseña string) error {
+func (tm *TweetManager) Login(userID string, contraseña string) error {
 
-	for i := range usuarios {
-		if (userID == usuarios[i].Nickname || userID == usuarios[i].Mail) && contraseña == usuarios[i].Contraseña {
-			logueados = append(logueados, usuarios[i])
+	for i := range tm.usuarios {
+		if (userID == tm.usuarios[i].Nickname || userID == tm.usuarios[i].Mail) && contraseña == tm.usuarios[i].Contraseña {
+			tm.logueados = append(tm.logueados, tm.usuarios[i])
 			return nil
 		}
 	}
@@ -24,7 +26,7 @@ func Login(userID string, contraseña string) error {
 }
 
 // PublishTweet modifica la variable Tweet
-func PublishTweet(text string, userID string) error {
+func (tm *TweetManager) PublishTweet(text string, userID string) error {
 
 	var err error
 	var user *domain.User
@@ -34,9 +36,9 @@ func PublishTweet(text string, userID string) error {
 		return err
 	}
 
-	for i := range logueados {
-		if logueados[i].Nickname == userID || logueados[i].Mail == userID {
-			user = logueados[i]
+	for i := range tm.logueados {
+		if tm.logueados[i].Nickname == userID || tm.logueados[i].Mail == userID {
+			user = tm.logueados[i]
 			break
 		}
 	}
@@ -53,16 +55,16 @@ func PublishTweet(text string, userID string) error {
 		return fmt.Errorf(err.Error())
 	}
 
-	tweets = append(tweets, tweet)
+	tm.tweets = append(tm.tweets, tweet)
 	user.Tweets = append(user.Tweets, tweet)
 	return nil
 
 }
 
-func RegistrarUsuario(name string, mail string, nick string, contraseña string) error {
+func (tm *TweetManager) RegistrarUsuario(name string, mail string, nick string, contraseña string) error {
 
-	for i := range usuarios {
-		if mail == usuarios[i].Mail || nick == usuarios[i].Nickname {
+	for i := range tm.usuarios {
+		if mail == tm.usuarios[i].Mail || nick == tm.usuarios[i].Nickname {
 			return fmt.Errorf("Usuario ya existente")
 		}
 	}
@@ -76,24 +78,24 @@ func RegistrarUsuario(name string, mail string, nick string, contraseña string)
 		return err
 	}
 
-	usuarios = append(usuarios, user)
+	tm.usuarios = append(tm.usuarios, user)
 	return nil
 }
 
 // GetTweet devuelve el tweet
-func GetLastTweet() (*domain.Tweet, error) {
-	if len(tweets) == 0 {
+func (tm *TweetManager) GetLastTweet() (*domain.Tweet, error) {
+	if len(tm.tweets) == 0 {
 		var err = fmt.Errorf("No hay tweets publicados")
 		return nil, err
 	}
-	return tweets[len(tweets)-1], nil
+	return tm.tweets[len(tm.tweets)-1], nil
 }
 
-func GetTweetByID(id int) (*domain.Tweet, error) {
+func (tm *TweetManager) GetTweetByID(id int) (*domain.Tweet, error) {
 
-	for i := range tweets {
-		if tweets[i].Id == id {
-			return tweets[i], nil
+	for i := range tm.tweets {
+		if tm.tweets[i].Id == id {
+			return tm.tweets[i], nil
 		}
 	}
 
@@ -103,12 +105,12 @@ func GetTweetByID(id int) (*domain.Tweet, error) {
 
 }
 
-func CantidadDeTweets(userID string) (int, error) {
+func (tm *TweetManager) CantidadDeTweets(userID string) (int, error) {
 
 	var user *domain.User
 	var err error
 
-	user, err = GetUserByID(userID)
+	user, err = tm.GetUserByID(userID)
 
 	if err != nil {
 		err = fmt.Errorf("Usuario no registrado")
@@ -118,23 +120,23 @@ func CantidadDeTweets(userID string) (int, error) {
 	return len(user.Tweets), nil
 }
 
-func GetUserByID(userID string) (*domain.User, error) {
+func (tm *TweetManager) GetUserByID(userID string) (*domain.User, error) {
 
-	for i := range usuarios {
-		if userID == usuarios[i].Mail || userID == usuarios[i].Nickname {
-			return usuarios[i], nil
+	for i := range tm.usuarios {
+		if userID == tm.usuarios[i].Mail || userID == tm.usuarios[i].Nickname {
+			return tm.usuarios[i], nil
 		}
 	}
 	var err error = fmt.Errorf("Usuario inexistente")
 	return nil, err
 }
 
-func Follow(userID1 string, userID2 string) error {
+func (tm *TweetManager) Follow(userID1 string, userID2 string) error {
 
 	var user *domain.User
 	var err error
 
-	user, err = GetUserByID(userID1)
+	user, err = tm.GetUserByID(userID1)
 
 	if err != nil {
 		err = fmt.Errorf("Usuario no registrado")
@@ -143,7 +145,7 @@ func Follow(userID1 string, userID2 string) error {
 
 	var follower *domain.User
 
-	follower, err = GetUserByID(userID2)
+	follower, err = tm.GetUserByID(userID2)
 
 	if err != nil {
 		err = fmt.Errorf("Usuario no registrado")
@@ -157,12 +159,12 @@ func Follow(userID1 string, userID2 string) error {
 
 }
 
-func GetTweetsByUser(userID string) ([]*domain.Tweet, error) {
+func (tm *TweetManager) GetTweetsByUser(userID string) ([]*domain.Tweet, error) {
 
 	var user *domain.User
 	var err error
 
-	user, err = GetUserByID(userID)
+	user, err = tm.GetUserByID(userID)
 
 	if err != nil {
 		return nil, err
@@ -171,14 +173,18 @@ func GetTweetsByUser(userID string) ([]*domain.Tweet, error) {
 	return user.Tweets, nil
 }
 
-func Logout(userID string, pass string) error {
+func (tm *TweetManager) Logout(userID string, pass string) error {
 
-	for i := range logueados {
-		if (userID == logueados[i].Nickname || userID == logueados[i].Mail) && pass == logueados[i].Contraseña {
-			logueados = append(logueados[:i], logueados[i+1:]...)
+	for i := range tm.logueados {
+		if (userID == tm.logueados[i].Nickname || userID == tm.logueados[i].Mail) && pass == tm.logueados[i].Contraseña {
+			tm.logueados = append(tm.logueados[:i], tm.logueados[i+1:]...)
 			return nil
 		}
 	}
 	var err error = fmt.Errorf("Usuario no logueado")
 	return err
+}
+
+func (tm *TweetManager) DeleteTweet(tweetId int) {
+
 }
