@@ -185,6 +185,28 @@ func (tm *TweetManager) Logout(userID string, pass string) error {
 	return err
 }
 
-func (tm *TweetManager) DeleteTweet(tweetId int) {
+func (tm *TweetManager) DeleteTweet(tweetId int) error {
+	for i:= range tm.tweets {
+		if tweetId == tm.tweets[i].Id {
+			tm.tweets = append(tm.tweets[:i],tm.tweets[i+1:]...)
+			return nil
+		}
+	}
 
+	return fmt.Errorf("Tweet inexistente")
+}
+
+func (tm *TweetManager) EditTweet(tweetId int, newTweet string, userID string, pass string) error {
+	for i:= range tm.tweets {
+		if tweetId == tm.tweets[i].Id {
+			if (userID == tm.tweets[i].User.Mail || userID == tm.tweets[i].User.Nickname) && tm.tweets[i].User.Contraseña == pass {
+				tm.tweets[i].Text = newTweet
+				return nil
+			} else {
+				return fmt.Errorf("Usuario invalido")
+			}
+		}
+	}
+
+	return fmt.Errorf("Tweet inexistente")
 }
