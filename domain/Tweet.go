@@ -5,8 +5,11 @@ import (
 	"time"
 )
 
+var currentId int = 0
+
 // Tweet struct es la estructura tweet
 type Tweet struct {
+	Id   int
 	User *User
 	Text string
 	Date *time.Time
@@ -26,5 +29,6 @@ func NewTweet(user *User, text string) (*Tweet, error) {
 		return nil, err
 	}
 
-	return &Tweet{User: user, Text: text, Date: &timeNow}, nil
+	currentId++
+	return &Tweet{User: user, Text: text, Date: &timeNow, Id: currentId}, nil
 }
