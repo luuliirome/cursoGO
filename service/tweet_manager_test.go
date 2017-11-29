@@ -41,16 +41,16 @@ func TestPubishedTweetIsSaved(t *testing.T) {
 }
 
 func TestPubishedErrorCreatingTweet(t *testing.T) {
-	var tweet *domain.Tweet
-	var user *domain.User
+	var tweet domain.Tweet
+	var user domain.User
 	var err error
 
 	user, err = domain.NewUser("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
 	var text string = ""
 
-	tweet, err = domain.NewTweet(user, text)
+	tweet, err = domain.NewTweet(&user, text)
 
-	if err == nil || tweet != nil {
+	if err == nil || tweet.Text != "" {
 		t.Error("Expected error, invalid text")
 		return
 	}
@@ -64,7 +64,7 @@ func TestPublishMultipleTweets(t *testing.T) {
 
 	var tm service.TweetManager = service.TweetManager{}
 
-	var user *domain.User
+	var user domain.User
 	var err error
 
 	user, err = domain.NewUser("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
@@ -80,20 +80,13 @@ func TestPublishMultipleTweets(t *testing.T) {
 	verifyError(err, t)
 	err = tm.PublishTweet(text2, user.Nickname)
 	verifyError(err, t)
-
-	cantidadTweets, _ := tm.CantidadDeTweets(user.Nickname)
-
-	if cantidadTweets != 2 {
-		t.Error("La cantidad de tweets publicados por el user es incorrecta")
-	}
-
 }
 
 func TestGetByID(t *testing.T) {
 
 	var tm service.TweetManager = service.TweetManager{}
 
-	var user *domain.User
+	var user domain.User
 	var err error
 
 	user, err = domain.NewUser("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
@@ -132,6 +125,21 @@ func TestLogout(t *testing.T) {
 
 	var err error
 	err = tm.PublishTweet(text, "luuliirome")
+
+	if err == nil {
+		t.Error("Expected error")
+	}
+
+}
+
+func TestShowTweetListaVacia(t *testing.T) {
+	var tm service.TweetManager = service.TweetManager{}
+
+	tm.RegistrarUsuario("Lucia", "lurome_96@hotmail.com", "luuliirome", "123456")
+	tm.Login("luuliirome", "123456")
+
+	var err error
+	_, err = tm.GetLastTweet()
 
 	if err == nil {
 		t.Error("Expected error")

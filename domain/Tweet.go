@@ -16,19 +16,19 @@ type Tweet struct {
 }
 
 // NewTweet crea un nuevo tweet
-func NewTweet(user *User, text string) (*Tweet, error) {
+func NewTweet(user *User, text string) (Tweet, error) {
 	var timeNow = time.Now()
 
 	if text == "" {
 		var err error = fmt.Errorf("text is required")
-		return nil, err
+		return Tweet{}, err
 	}
 
 	if user == nil {
 		var err error = fmt.Errorf("user is required")
-		return nil, err
+		return Tweet{}, err
 	}
 
 	currentId++
-	return &Tweet{User: user, Text: text, Date: &timeNow, Id: currentId}, nil
+	return Tweet{User: user, Text: text, Date: &timeNow, Id: currentId}, nil
 }

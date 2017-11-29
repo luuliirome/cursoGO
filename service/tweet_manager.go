@@ -7,8 +7,8 @@ import (
 )
 
 type TweetManager struct {
-	tweets    []*domain.Tweet
-	usuarios  []*domain.User
+	tweets    []domain.Tweet
+	usuarios  []domain.User
 	logueados []*domain.User
 }
 
@@ -16,7 +16,7 @@ func (tm *TweetManager) Login(userID string, contraseña string) error {
 
 	for i := range tm.usuarios {
 		if (userID == tm.usuarios[i].Nickname || userID == tm.usuarios[i].Mail) && contraseña == tm.usuarios[i].Contraseña {
-			tm.logueados = append(tm.logueados, tm.usuarios[i])
+			tm.logueados = append(tm.logueados, &tm.usuarios[i])
 			return nil
 		}
 	}
@@ -47,7 +47,7 @@ func (tm *TweetManager) PublishTweet(text string, userID string) error {
 		return fmt.Errorf("Usuario NO logueado")
 	}
 
-	var tweet *domain.Tweet
+	var tweet domain.Tweet
 
 	tweet, err = domain.NewTweet(user, text)
 
@@ -56,7 +56,6 @@ func (tm *TweetManager) PublishTweet(text string, userID string) error {
 	}
 
 	tm.tweets = append(tm.tweets, tweet)
-	user.Tweets = append(user.Tweets, tweet)
 	return nil
 
 }
@@ -69,7 +68,7 @@ func (tm *TweetManager) RegistrarUsuario(name string, mail string, nick string, 
 		}
 	}
 
-	var user *domain.User
+	var user domain.User
 	var err error
 
 	user, err = domain.NewUser(name, mail, nick, contraseña)
@@ -88,14 +87,14 @@ func (tm *TweetManager) GetLastTweet() (*domain.Tweet, error) {
 		var err = fmt.Errorf("No hay tweets publicados")
 		return nil, err
 	}
-	return tm.tweets[len(tm.tweets)-1], nil
+	return &tm.tweets[len(tm.tweets)-1], nil
 }
 
 func (tm *TweetManager) GetTweetByID(id int) (*domain.Tweet, error) {
 
 	for i := range tm.tweets {
 		if tm.tweets[i].Id == id {
-			return tm.tweets[i], nil
+			return &tm.tweets[i], nil
 		}
 	}
 
@@ -105,26 +104,26 @@ func (tm *TweetManager) GetTweetByID(id int) (*domain.Tweet, error) {
 
 }
 
-func (tm *TweetManager) CantidadDeTweets(userID string) (int, error) {
+// func (tm *TweetManager) CantidadDeTweets(userID string) (int, error) {
 
-	var user *domain.User
-	var err error
+// 	var user *domain.User
+// 	var err error
 
-	user, err = tm.GetUserByID(userID)
+// 	user, err = tm.GetUserByID(userID)
 
-	if err != nil {
-		err = fmt.Errorf("Usuario no registrado")
-		return 0, err
-	}
+// 	if err != nil {
+// 		err = fmt.Errorf("Usuario no registrado")
+// 		return 0, err
+// 	}
 
-	return len(user.Tweets), nil
-}
+// 	return len(user.Tweets), nil
+// }
 
 func (tm *TweetManager) GetUserByID(userID string) (*domain.User, error) {
 
 	for i := range tm.usuarios {
 		if userID == tm.usuarios[i].Mail || userID == tm.usuarios[i].Nickname {
-			return tm.usuarios[i], nil
+			return &tm.usuarios[i], nil
 		}
 	}
 	var err error = fmt.Errorf("Usuario inexistente")
@@ -170,7 +169,20 @@ func (tm *TweetManager) GetTweetsByUser(userID string) ([]*domain.Tweet, error) 
 		return nil, err
 	}
 
-	return user.Tweets, nil
+	var userTweets []*domain.Tweet
+
+	for t := range tm.tweets {
+		if tm.tweets[t].User == user {
+			userTweets = append(userTweets, &tm.tweets[t])
+		}
+	}
+
+	if len(userTweets) == 0 {
+		err = fmt.Errorf("El usuario no tiene tweets publicados")
+		return nil, err
+	}
+
+	return userTweets, nil
 }
 
 func (tm *TweetManager) Logout(userID string, pass string) error {
@@ -185,19 +197,24 @@ func (tm *TweetManager) Logout(userID string, pass string) error {
 	return err
 }
 
-func (tm *TweetManager) DeleteTweet(tweetId int) error {
-	for i:= range tm.tweets {
-		if tweetId == tm.tweets[i].Id {
-			tm.tweets = append(tm.tweets[:i],tm.tweets[i+1:]...)
+func (tm *TweetManager) DeleteTweet(tweetId int, userID string, pass string) error {
+
+	for i := range tm.tweets {
+
+		if tweetId == tm.tweets[i].Id && pass == tm.tweets[i].User.Contraseña && (tm.tweets[i].User.Nickname == userID || tm.tweets[i].User.Mail == userID) {
+
+			tm.tweets[i] = tm.tweets[len(tm.tweets)-1]
+			tm.tweets = tm.tweets[:len(tm.tweets)-1]
 			return nil
+
 		}
 	}
 
-	return fmt.Errorf("Tweet inexistente")
+	return fmt.Errorf("No existe el tweet o el usuario no posee los permisos para borrarlo")
 }
 
 func (tm *TweetManager) EditTweet(tweetId int, newTweet string, userID string, pass string) error {
-	for i:= range tm.tweets {
+	for i := range tm.tweets {
 		if tweetId == tm.tweets[i].Id {
 			if (userID == tm.tweets[i].User.Mail || userID == tm.tweets[i].User.Nickname) && tm.tweets[i].User.Contraseña == pass {
 				tm.tweets[i].Text = newTweet

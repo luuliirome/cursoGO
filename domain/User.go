@@ -9,15 +9,14 @@ type User struct {
 	Mail       string
 	Nickname   string
 	Contraseña string
-	Tweets     []*Tweet
 	Followers  []*User
 	Following  []*User
 }
 
-func NewUser(name string, mail string, nick string, contraseña string) (*User, error) {
+func NewUser(name string, mail string, nick string, contraseña string) (User, error) {
 	if name == "" || mail == "" || contraseña == "" || nick == "" {
 		var err error = fmt.Errorf("invalid user")
-		return nil, err
+		return User{}, err
 	}
-	return &User{Name: name, Mail: mail, Contraseña: contraseña, Nickname: nick}, nil
+	return User{Name: name, Mail: mail, Contraseña: contraseña, Nickname: nick}, nil
 }
