@@ -7,55 +7,53 @@ import (
 )
 
 type TweetManager struct {
-	tweets    []domain.Tweet
+	tweets    map[int]domain.Tweet
 	usuarios  []domain.User
-	logueados []*domain.User
+	logueados map[string]*domain.User
 }
 
 func (tm *TweetManager) Login(userID string, contraseña string) error {
 
 	for i := range tm.usuarios {
-		if (userID == tm.usuarios[i].Nickname || userID == tm.usuarios[i].Mail) && contraseña == tm.usuarios[i].Contraseña {
-			tm.logueados = append(tm.logueados, &tm.usuarios[i])
-			return nil
+		if userID == tm.usuarios[i].Mail || userID == tm.usuarios[i].Nickname {
+			if tm.usuarios[i].Contraseña == contraseña {
+				tm.logueados[userID] = &tm.usuarios[i]
+				return nil
+			}
+
+			return fmt.Errorf("Contraseña invalida")
 		}
 	}
 
-	var err error = fmt.Errorf("user is required")
-	return err
+	return fmt.Errorf("El usuario no esta registrado")
+
 }
 
 // PublishTweet modifica la variable Tweet
 func (tm *TweetManager) PublishTweet(text string, userID string) error {
 
 	var err error
-	var user *domain.User
 
 	if text == "" {
 		err = fmt.Errorf("text is required")
 		return err
 	}
 
-	for i := range tm.logueados {
-		if tm.logueados[i].Nickname == userID || tm.logueados[i].Mail == userID {
-			user = tm.logueados[i]
-			break
-		}
-	}
+	i, ok := tm.logueados[userID]
 
-	if user == nil {
+	if !ok {
 		return fmt.Errorf("Usuario NO logueado")
 	}
 
 	var tweet domain.Tweet
 
-	tweet, err = domain.NewTweet(user, text)
+	tweet, err = domain.NewTweet(i, text)
 
 	if err != nil {
 		return fmt.Errorf(err.Error())
 	}
 
-	tm.tweets = append(tm.tweets, tweet)
+	tm.tweets[tweet.Id] = tweet
 	return nil
 
 }
@@ -81,26 +79,16 @@ func (tm *TweetManager) RegistrarUsuario(name string, mail string, nick string, 
 	return nil
 }
 
-// GetTweet devuelve el tweet
-func (tm *TweetManager) GetLastTweet() (*domain.Tweet, error) {
-	if len(tm.tweets) == 0 {
-		var err = fmt.Errorf("No hay tweets publicados")
-		return nil, err
-	}
-	return &tm.tweets[len(tm.tweets)-1], nil
-}
-
 func (tm *TweetManager) GetTweetByID(id int) (*domain.Tweet, error) {
 
-	for i := range tm.tweets {
-		if tm.tweets[i].Id == id {
-			return &tm.tweets[i], nil
-		}
+	i, ok := tm.tweets[id]
+
+	if !ok {
+		var err error = fmt.Errorf("ID invalido")
+		return nil, err
 	}
 
-	var err error = fmt.Errorf("ID invalido")
-
-	return nil, err
+	return &i, nil
 
 }
 
@@ -130,12 +118,12 @@ func (tm *TweetManager) GetUserByID(userID string) (*domain.User, error) {
 	return nil, err
 }
 
-func (tm *TweetManager) Follow(userID1 string, userID2 string) error {
+func (tm *TweetManager) Follow(seguido string, seguidor string) error {
 
 	var user *domain.User
 	var err error
 
-	user, err = tm.GetUserByID(userID1)
+	user, err = tm.GetUserByID(seguido)
 
 	if err != nil {
 		err = fmt.Errorf("Usuario no registrado")
@@ -144,11 +132,15 @@ func (tm *TweetManager) Follow(userID1 string, userID2 string) error {
 
 	var follower *domain.User
 
-	follower, err = tm.GetUserByID(userID2)
+	for i := range tm.logueados {
+		if tm.logueados[i].Nickname == seguidor || tm.logueados[i].Mail == seguidor {
+			user = tm.logueados[i]
+			break
+		}
+	}
 
-	if err != nil {
-		err = fmt.Errorf("Usuario no registrado")
-		return err
+	if user == nil {
+		return fmt.Errorf("Usuario NO logueado")
 	}
 
 	user.Followers = append(user.Followers, follower)
@@ -158,7 +150,7 @@ func (tm *TweetManager) Follow(userID1 string, userID2 string) error {
 
 }
 
-func (tm *TweetManager) GetTweetsByUser(userID string) ([]*domain.Tweet, error) {
+func (tm *TweetManager) GetTweetsByUser(userID string) ([]domain.Tweet, error) {
 
 	var user *domain.User
 	var err error
@@ -169,11 +161,11 @@ func (tm *TweetManager) GetTweetsByUser(userID string) ([]*domain.Tweet, error) 
 		return nil, err
 	}
 
-	var userTweets []*domain.Tweet
+	var userTweets []domain.Tweet
 
-	for t := range tm.tweets {
-		if tm.tweets[t].User == user {
-			userTweets = append(userTweets, &tm.tweets[t])
+	for _, v := range tm.tweets {
+		if v.User == user {
+			userTweets = append(userTweets, v)
 		}
 	}
 
@@ -187,43 +179,105 @@ func (tm *TweetManager) GetTweetsByUser(userID string) ([]*domain.Tweet, error) 
 
 func (tm *TweetManager) Logout(userID string, pass string) error {
 
-	for i := range tm.logueados {
-		if (userID == tm.logueados[i].Nickname || userID == tm.logueados[i].Mail) && pass == tm.logueados[i].Contraseña {
-			tm.logueados = append(tm.logueados[:i], tm.logueados[i+1:]...)
-			return nil
-		}
+	i, ok := tm.logueados[userID]
+
+	if !ok {
+		return fmt.Errorf("Usuario no logueado")
 	}
-	var err error = fmt.Errorf("Usuario no logueado")
-	return err
+
+	if i.Contraseña != pass {
+		return fmt.Errorf("Contraseña incorrecta")
+	}
+
+	delete(tm.logueados, userID)
+	return nil
 }
 
 func (tm *TweetManager) DeleteTweet(tweetId int, userID string, pass string) error {
 
-	for i := range tm.tweets {
+	i, ok := tm.logueados[userID]
 
-		if tweetId == tm.tweets[i].Id && pass == tm.tweets[i].User.Contraseña && (tm.tweets[i].User.Nickname == userID || tm.tweets[i].User.Mail == userID) {
-
-			tm.tweets[i] = tm.tweets[len(tm.tweets)-1]
-			tm.tweets = tm.tweets[:len(tm.tweets)-1]
-			return nil
-
-		}
+	if !ok {
+		return fmt.Errorf("Usuario no logueado")
 	}
 
-	return fmt.Errorf("No existe el tweet o el usuario no posee los permisos para borrarlo")
+	if i.Contraseña != pass {
+		return fmt.Errorf("Contraseña incorrecta")
+	}
+
+	v, ok := tm.tweets[tweetId]
+
+	if !ok {
+		return fmt.Errorf("Tweet inexistente")
+	}
+
+	if v.User.Nickname != i.Nickname {
+		return fmt.Errorf("No posees los permisos necesarios para borrar este tweet")
+	}
+
+	delete(tm.tweets, tweetId)
+	return nil
 }
 
-func (tm *TweetManager) EditTweet(tweetId int, newTweet string, userID string, pass string) error {
-	for i := range tm.tweets {
-		if tweetId == tm.tweets[i].Id {
-			if (userID == tm.tweets[i].User.Mail || userID == tm.tweets[i].User.Nickname) && tm.tweets[i].User.Contraseña == pass {
-				tm.tweets[i].Text = newTweet
-				return nil
-			} else {
-				return fmt.Errorf("Usuario invalido")
-			}
+func (tm *TweetManager) EditTweet(tweetId int, newTweet string, userID string) error {
+
+	_, ok := tm.logueados[userID]
+
+	if !ok {
+		return fmt.Errorf("Usuario no logueado")
+	}
+
+	t, ok := tm.tweets[tweetId]
+
+	if !ok {
+		return fmt.Errorf("Tweeter inexistente")
+	}
+
+	if t.User.Nickname != userID {
+		return fmt.Errorf("No posees los permisos necesarios para modificar el tweet")
+	}
+
+	tweet, err := domain.NewTweet(t.User, newTweet)
+
+	if err != nil {
+		return err
+	}
+
+	tm.tweets[tweetId] = tweet
+
+	return nil
+}
+
+func (tm *TweetManager) ShowFollowers(userID string) ([]*domain.User, error) {
+	var user *domain.User
+	var err error
+
+	user, err = tm.GetUserByID(userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(user.Followers) == 0 {
+		return nil, fmt.Errorf("El usuario no posee seguidores")
+	}
+
+	return user.Followers, nil
+}
+
+func (tm *TweetManager) ShowTimeline(userID string) ([]*domain.Tweet, error) {
+
+	var logueado bool = false
+	for j := range tm.logueados {
+		if tm.logueados[j].Nickname == userID || tm.logueados[j].Mail == userID {
+			logueado = true
+			break
 		}
 	}
 
-	return fmt.Errorf("Tweet inexistente")
+	if !logueado {
+		return nil, fmt.Errorf("Usuario no logueado")
+	}
+
+	return nil, nil
 }
